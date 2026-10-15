@@ -1,0 +1,11 @@
+const fs=require('fs'),vm=require('vm'),assert=require('node:assert/strict');
+const source=fs.readFileSync(__dirname+'/app.js','utf8');
+const nodes={}; const ctx={$:id=>nodes[id]??=( {} ),heading:(a,b)=>a+b,panel:(a,b)=>a+b};vm.createContext(ctx);
+vm.runInContext(source.slice(source.indexOf('function renderFileStart(){'),source.indexOf('async function boot(){')),ctx);
+ctx.renderFileStart();
+assert.equal(nodes.leader.disabled,true);assert.equal(nodes['leader-search'].disabled,true);
+assert(!nodes.leader.innerHTML.includes('Connecting'));
+assert(nodes.screen.innerHTML.includes('http://127.0.0.1:8787/#/portfolio'));
+assert(nodes.screen.innerHTML.includes('another computer needs its own connection setup'));
+assert(source.includes("if(location.protocol==='file:'){renderFileStart();return}"),'Hash navigation must retain the file recovery screen');
+console.log('PASS: local file shows explicit disconnected state, disables unavailable controls, offers app link and accurate setup recovery.');

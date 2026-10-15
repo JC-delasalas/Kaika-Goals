@@ -1,0 +1,16 @@
+{
+  "name": "kaika-goals",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "build:transport": "vite build",
+    "typecheck": "tsc --noEmit",
+    "test:ui": "node test_hygiene.js && node test_summary_history.js && node test_plans_map.js && node test_team.js && node test_portfolio.js && node test_reviews.js && node test_summary.js && node test_file_entry.js",
+    "build": "vite build && python3 build.py",
+    "check": "npm run typecheck && npm run test:ui"
+  },
+  "devDependencies": {
+    "typescript": "7.0.2",
+    "vite": "8.3.4"
+  }
+}

@@ -1,0 +1,11 @@
+const fs=require('fs'),vm=require('vm'),assert=require('node:assert/strict');
+let gs=[{id:'a',active_version_id:'va',state:'on_track'},{id:'b',parent_id:'a',active_version_id:'vb',state:'blocked'},{id:'draft'}];
+const d={id:'d',due_on:'2026-10-30'},u={id:'u',due_on:'2026-10-30'};
+const ctx={console,Set,Map,gv:()=>({}),data:{goals:gs,demo:{as_of:'2026-10-27'},delivery_progress:[{deliverable_id:'d',calculated_health:'on_track'},{deliverable_id:'u',calculated_health:'unknown'}]},portfolio:()=>'',act:()=>{},portfolioState:g=>g.state,portfolioCheckin:()=>'',activeDeliveries:()=>[d,d,u],portfolioAttentionNeeded:g=>g.state==='blocked',miniGoal:g=>'<i data-goal="'+g.id+'"></i>'};
+vm.createContext(ctx);vm.runInContext(fs.readFileSync(__dirname+'/summary_ui.js','utf8'),ctx);
+let m=ctx.summaryModel(gs);assert.equal(m.roots.length,2);assert.equal(m.drafts,1);assert.equal(m.rows[0].value,100);assert.equal(m.rows[1].value,50);assert.equal(m.score,80);assert.equal(m.rows[1].deliverables.length,2);
+ctx.portfolioCheckin=()=> 'Missing';assert.equal(ctx.summaryModel(gs).score,60);
+assert.equal(ctx.summaryModel([]).score,null);assert.equal(ctx.summaryModel([gs[2]]).score,null);
+const board=ctx.summaryBoard(gs);for(const g of gs)assert.equal(board.split('data-goal="'+g.id+'"').length-1,1);
+ctx.data.goals=[{id:'cycle-a',parent_id:'cycle-b'},{id:'cycle-b',parent_id:'cycle-a'}];assert.doesNotThrow(()=>ctx.summaryRoots(ctx.data.goals));
+console.log('Summary checks passed: unique leaves, top-level priorities, unknown health, missing check-ins, draft/empty state, score weights, board partition and cycle guard.');

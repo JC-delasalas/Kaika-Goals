@@ -1,0 +1,17 @@
+node_modules/
+.venv*/
+__pycache__/
+*.pyc
+*.log
+.env*
+!.env.example
+.*config.json
+.demo-state*
+dist/
+frontend/dist/
+coverage/
+*.zip
+*.png
+*.jpg
+*.mp4
+*.vtt
