@@ -38,4 +38,4 @@ One old file-entry assertion still expected the removed Overview route. It was c
 
 ## Limitations
 
-No production authentication, multi-tenant rollout, concurrent capacity certification, malware scanning, actual-cost integration or WCAG conformance claim is included. Existing goal setup still needs metric-only/combined success, deliverable-specific allocation and improved charter/registration separation. The private source-derived product plan addresses these gaps.
+No production authentication, multi-tenant rollout, concurrent capacity certification, malware scanning, actual-cost integration or WCAG conformance claim is included. The setup limitations recorded on 15 October were subsequently addressed by Goal Charter and Registration on 16 October. See GOAL-REGISTRATION.md, CROSS-TAB-CONSISTENCY.md and HIERARCHY-AND-NEXT-BUILD.md for later evidence and remaining gates.

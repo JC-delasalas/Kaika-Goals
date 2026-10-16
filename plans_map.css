@@ -8,3 +8,20 @@
 .plan-node .node-content{padding:12px 14px 8px;flex:1 0 auto;overflow:visible}.plan-node h3{font-size:14px;line-height:1.4;margin:6px 0}.plan-node p{margin:5px 0}.plan-node .btn{min-height:28px;margin:5px 0 0;padding:5px 8px}.plan-node .map-owner{margin:4px 0 6px}.plan-node .node-expand,.plan-node .node-leaf{flex:0 0 auto}.plan-node .map-numbers{margin-top:7px;gap:3px 6px}.plan-node .map-extras{margin:5px 0}
 /* The entire wrapped title is a link, including the gap between its lines. */
 .plan-node h3 a{display:block;min-height:24px}
+/* Hierarchy exploration: compact controls, explicit context, bounded branches. */
+.hierarchy-controls{border:1px solid var(--line);border-radius:10px;background:#fff;padding:14px 16px;margin:12px 0}
+#hierarchy-filters{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap}
+#hierarchy-filters label{display:flex;flex:1 1 155px;flex-direction:column;gap:5px;font-size:12px;font-weight:600;color:#435e53;margin:0;min-width:0}
+#hierarchy-filters .hierarchy-search{flex:2 1 230px}
+#hierarchy-filters input,#hierarchy-filters select{width:100%;min-width:0;max-width:100%;height:38px;padding:7px 10px;font-size:13px;border:1px solid #aabeb4;border-radius:6px;background:#fff;color:#243e34}
+#hierarchy-filters>.btn{min-height:38px;font-size:12px;padding:8px 13px;flex-shrink:0}
+.hierarchy-approval{flex-basis:100%;font-size:12px}.hierarchy-approval summary{cursor:pointer;color:#326b58;padding:4px 0}.hierarchy-approval label{max-width:280px;margin-top:8px!important}
+.hierarchy-results{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:10px}.hierarchy-results p{font-size:13px;color:#425e52;margin:0}.hierarchy-results>div{display:flex;gap:6px;flex-wrap:wrap}.hierarchy-results .btn{font-size:12px;padding:5px 10px;min-height:32px}
+.hierarchy-filter-note{font-size:12px;color:#53695f;margin:8px 0 0}.hierarchy-empty{text-align:center;border:1px solid var(--line);border-radius:10px;padding:36px 20px;background:white}.hierarchy-empty h2{font-size:20px}.hierarchy-empty p{font-size:14px;color:#53695f}
+.node-more{border:0;border-top:1px solid #dce8e3;padding:9px 8px;background:#eaf3ef;color:#175d48;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;min-height:34px;flex-shrink:0}.node-more:hover{background:#dcebe3}.node-more:focus-visible{outline:3px solid #408977;outline-offset:-3px}
+.filter-context>.node-content>.node-type,.filter-context>.hierarchy-list-row>b>small{color:#63766d}.plan-node.filter-context{border-style:dashed;box-shadow:none}
+.hierarchy-list-row>b>small{display:block;font-size:11px;font-weight:500;color:#53695f;margin-bottom:4px}.hierarchy-list-tools{display:flex;gap:8px;margin:12px 0}.hierarchy-list-tools .btn{font-size:12px;padding:7px 11px}.hierarchy-list .node-more{border:1px solid #dce8e3;border-radius:5px;margin-left:8px}.hierarchy-list .node-expand{border-radius:5px}.hierarchy-list .node-leaf:empty{display:none}.hierarchy-list .hierarchy-list-children:empty{display:none}
+.map-workbench.expanded{overflow:auto}.map-workbench.expanded .hierarchy-controls{margin-top:0;flex-shrink:0}.map-workbench.expanded .plan-canvas{min-height:220px;flex-shrink:0}
+@media(hover:hover) and (prefers-reduced-motion:no-preference){.hierarchy-controls .btn,.node-expand,.node-more{transition:background-color 140ms ease-out,border-color 140ms ease-out}.plan-node h3 a{transition:color 140ms ease-out}.plan-node h3 a:hover{color:#126a51}}
+@media(max-width:700px){.hierarchy-controls{padding:12px}#hierarchy-filters .hierarchy-search{flex-basis:100%}#hierarchy-filters label{flex-basis:calc(50% - 10px)}.hierarchy-results{align-items:flex-start}.hierarchy-filter-note{line-height:1.5}.map-toolbar>div{gap:5px}.map-workbench.expanded .hierarchy-controls{max-height:45vh;overflow:auto}}
+.hierarchy-branch-size{display:flex;gap:7px;align-items:center;font-size:12px;color:#435e53;margin:0}.hierarchy-branch-size select{font:inherit;color:#243e34;border:1px solid #aabeb4;border-radius:6px;background:white;padding:7px;min-height:34px;width:56px}.hierarchy-list-tools{align-items:center;flex-wrap:wrap}

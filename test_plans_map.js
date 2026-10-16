@@ -4,7 +4,7 @@ const state={spatial:{zoom:1,scope:'all',focus:'',glide:true,expanded:false,coll
 let handlers={},frames=new Map(),frameId=0,canvas;
 function makeCanvas(){return {scrollLeft:300,scrollTop:120,clientWidth:800,clientHeight:600,scrollWidth:2000,classList:{add(){},remove(){}},getBoundingClientRect:()=>({left:0,top:0,width:800,height:600}),addEventListener:(type,fn)=>{handlers[type]=fn}}}
 canvas=makeCanvas();
-const ctx={ls:()=>state,goals:()=>[],plans:()=>'',act:()=>{},render:()=>{},matchMedia:()=>({matches:false}),document:{querySelector:selector=>selector==='.plan-scaled'?{offsetLeft:20,offsetTop:28}:canvas,contains:()=>true},requestAnimationFrame:fn=>{frames.set(++frameId,fn);return frameId},cancelAnimationFrame:id=>frames.delete(id),Set,console};vm.createContext(ctx);vm.runInContext(fs.readFileSync(__dirname+'/plans_map.js','utf8'),ctx);
+const ctx={ls:()=>state,goals:()=>[],plans:()=>'',act:()=>{},render:()=>{},matchMedia:()=>({matches:false}),document:{addEventListener(){},querySelector:selector=>selector==='.plan-scaled'?{offsetLeft:20,offsetTop:28}:canvas,contains:()=>true},requestAnimationFrame:fn=>{frames.set(++frameId,fn);return frameId},cancelAnimationFrame:id=>frames.delete(id),Set,console};vm.createContext(ctx);vm.runInContext(fs.readFileSync(__dirname+'/plans_map.js','utf8'),ctx);
 const result=vm.runInContext(`pmLayout(pmNode('root','Ultimate goal','root','',[pmNode('one','Objective','one','',[pmNode('leaf','Deliverable','leaf')]),pmNode('two','Objective','two')]))`,ctx);
 assert.equal(result.nodes.length,4);
 for(let i=0;i<result.nodes.length;i++)for(let j=i+1;j<result.nodes.length;j++){const a=result.nodes[i],b=result.nodes[j];assert.ok(a.x+result.w<=b.x||b.x+result.w<=a.x||a.y+a.h<=b.y||b.y+b.h<=a.y,'Cards must not overlap')}
@@ -20,3 +20,27 @@ ctx.goals=()=>[{id:'root',parent_id:null,owner:'me'},{id:'child',parent_id:'root
 let collapsed=ctx.pmDefaultCollapsed();assert.equal(collapsed.has('root'),false);assert.equal(collapsed.has('child'),true);assert.equal(collapsed.has('grandchild'),true);
 collapsed=ctx.pmDefaultCollapsed('child');assert.equal(collapsed.has('child'),false);assert.equal(collapsed.has('grandchild'),true);
 console.log('PASS: default and centered views reveal two goal levels; deeper branches remain closed.');
+// Twenty-workstream scenario: no employee records, network, or roll-up mutations.
+const goal=(id,children=[],overrides={})=>({id,type:'Workstream / objective',title:id,body:'',goalId:id,isGoal:true,owner:'team-a',health:'on_track',approval:'approved',pillar:'Data',search:id.toLowerCase(),children,...overrides});
+const leaf={id:'delivery-17',type:'Deliverable',title:'Evidence package',children:[]};
+const workstreams=Array.from({length:20},(_,i)=>goal('workstream-'+i,i===17?[leaf]:[],{owner:i===17?'team-b':'team-a',health:i===17?'blocked':'on_track',search:i===17?'workstream-17 evidence package':'workstream-'+i,approval:i===18?'submitted':'approved'}));
+const fixture=goal('root',workstreams,{type:'Objective'}),beforeFilter=JSON.stringify(fixture);
+const empty={search:'',owner:'',health:'',approval:'',pillar:''};
+let filtered=ctx.pmFilterTree(fixture,{...empty,health:'attention'});
+assert.equal(filtered.total,21);assert.equal(filtered.matches,1);assert.equal(filtered.context,1);assert.equal(filtered.tree.filterContext,true);assert.equal(filtered.tree.children[0].id,'workstream-17');assert.equal(filtered.tree.children[0].children[0].id,leaf.id);
+assert.equal(JSON.stringify(fixture),beforeFilter,'Filtering must not mutate source data or roll-up children');
+filtered=ctx.pmFilterTree(fixture,{...empty,search:'EVIDENCE PACKAGE'});assert.equal(filtered.matches,1,'Deliverable search finds its owning workstream');assert.equal(filtered.tree.children.length,1,'No unrelated siblings');
+assert.equal(ctx.pmFilterTree(fixture,{...empty,owner:'outside-scope'}).tree,null,'Never load another owner to satisfy a filter');
+assert.equal(ctx.pmFilterTree(fixture,{...empty,owner:'team-b',health:'on_track'}).tree,null,'Filters combine with AND');
+assert.equal(ctx.pmFilterTree(fixture,{...empty,approval:'submitted'}).tree.children[0].id,'workstream-18');
+assert.equal(ctx.pmFilterTree(fixture,{...empty,pillar:'Different'}).tree,null);
+assert.equal(ctx.pmFilterTree(fixture,empty).tree.children.length,20,'Clear restores the original tree');
+state.spatial.collapsed.clear();state.spatial.limits={};
+let large=ctx.pmLayout(fixture);assert.equal(large.nodes.length,7,'Six branches shown by default');assert.equal(ctx.pmChildren(fixture).length,6);
+state.spatial.limits.root=12;assert.equal(ctx.pmLayout(fixture).nodes.length,13);
+state.spatial.limits.root=24;assert.equal(ctx.pmLayout(fixture).nodes.length,22,'All branches and their delivery become reachable');
+const otherLeader={spatial:{zoom:1,collapsed:new Set()}};ctx.ls=()=>otherLeader;assert.equal(ctx.pmChildren(fixture).length,6,'Branch limits do not leak between leaders');assert.equal(ctx.pm().filters.owner,'','Filters initialize per leader');ctx.ls=()=>state;
+console.log('PASS: 20-workstream pagination, ancestor context, attached deliverables, owner/status/approval/pillar/search intersections, no matches, clear, leader isolation and immutable roll-up inputs.');
+state.spatial.limits={};state.spatial.branchSize=3;assert.equal(ctx.pmChildren(fixture).length,3);state.spatial.branchSize=12;assert.equal(ctx.pmChildren(fixture).length,12);state.spatial.branchSize=6;
+frames.clear();ctx.matchMedia=()=>({matches:true});ctx.render();handlers.pointermove({pointerType:'mouse',buttons:0,clientX:790,clientY:300,target});assert.equal(frames.size,0,'Reduced motion stops hover glide even when previously enabled');ctx.matchMedia=()=>({matches:false});
+console.log('PASS: branch-density selection and live reduced-motion glide protection.');
