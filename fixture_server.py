@@ -169,7 +169,12 @@ class Fixture:
     elif action=='checkin':
      require(v['owner_id']==l and p.get('health') in ['on_track','at_risk','blocked','unknown'],'Only the owner can record a valid check-in.',403)
      require(p.get('reason','').strip(),'Explain the update.')
-     self.db['checkins'].insert(0,dict(id=str(uuid.uuid4()),goal_id=g['id'],author_id=l,health=p['health'],reason=p['reason'],eta=p.get('eta'),created_at=now()))
+     # created_at is the legacy workshop clock used by cadence and frozen reviews.
+     # Keep it monotonic across real midnights; retain the real audit time separately.
+     stamp=datetime.datetime.fromisoformat(now())
+     prior=[datetime.datetime.fromisoformat(c['created_at'].replace('Z','+00:00')) for c in self.db['checkins'] if c['goal_id']==g['id']]
+     if prior:stamp=max(stamp,max(prior)+datetime.timedelta(microseconds=1))
+     self.db['checkins'].insert(0,dict(id=str(uuid.uuid4()),goal_id=g['id'],author_id=l,health=p['health'],reason=p['reason'],eta=p.get('eta'),created_at=stamp.isoformat(),recorded_at=datetime.datetime.now(datetime.timezone.utc).isoformat()))
     elif action=='save_draft':
      require(v['owner_id']==l and v['state']=='draft','Only the owner can edit a draft.',403)
      require(not p.get('deliverables') or g.get('hierarchy_model')!='workstream-delivery' or g.get('node_kind')=='workstream','Attach deliverables to a workstream beneath this objective.')

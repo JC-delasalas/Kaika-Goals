@@ -15,3 +15,5 @@ coverage/
 *.jpg
 *.mp4
 *.vtt
+
+.venv*

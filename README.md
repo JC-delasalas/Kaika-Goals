@@ -47,6 +47,10 @@ npm run check
 
 The CI template in `docs/ci-verify.yml` uses synthetic data only. To activate it, place it at `.github/workflows/verify.yml` using a GitHub connection with workflow permission. It is not active yet. See [architecture](docs/ARCHITECTURE.md), [verification](docs/VERIFICATION.md) and [product scope](docs/PRODUCT-SCOPE.md). Private meeting transcripts and detailed stakeholder documents remain outside this public repository.
 
+## Goal Charter
+
+Approved goals open the Charter; unfinished goals open setup. See [behavior and connected verification](docs/GOAL-CHARTER.md).
+
 ## Source provenance
 
 The small Oslo kommune OKR helper in `vendor/` is derived from `oslokommune/okr-tracker` revision `06d87896644280771549c8c1c9212c11ea1f665f`. Its MIT notice and attribution are retained. Perdoo informed product patterns only; its code and assets were not copied. Third-party licenses do not grant a license to all original application code.

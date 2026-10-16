@@ -75,4 +75,14 @@ class LeadershipTests(unittest.TestCase):
   with self.assertRaises(Invalid):validate_plan(self.f,v)
   a['allocation_pct']=10;a['month']='2027-01-01'
   with self.assertRaises(Invalid):validate_plan(self.f,v)
+
+ def test_checkin_clock_does_not_reorder_after_midnight(self):
+  from unittest.mock import patch
+  self.f.db['checkins'].append(dict(id='late',goal_id=self.g['id'],author_id=uid('bea'),health='on_track',reason='Earlier save late in the day',created_at='2026-10-27T23:59:00+00:00'))
+  with patch('fixture_server.now',return_value='2026-10-27T01:00:00+00:00'):
+   status,_,_=self.call('checkin',dict(goal_id=self.g['id'],health='on_track',reason='Newest update after real midnight',eta='2026-11-01'))
+  self.assertEqual(status,200)
+  latest=max((c for c in self.f.db['checkins'] if c['goal_id']==self.g['id']),key=lambda c:c['created_at'])
+  self.assertEqual(latest['reason'],'Newest update after real midnight');self.assertIn('recorded_at',latest)
+
 if __name__=='__main__':unittest.main()
