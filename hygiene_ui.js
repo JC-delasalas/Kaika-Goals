@@ -12,7 +12,8 @@ function hygienePlanIssues(g){
  if(!v.cadence)issues.push('Choose an update frequency.');
  for(const m of d.measures){if(!m.title||!m.unit||!m.source)issues.push('Complete the measure name, unit and data source.');if(m.baseline==null||m.target==null||Number(m.baseline)===Number(m.target))issues.push('Set distinct baseline and target values for each measure.');}
  for(const x of d.deliverables){if(!x.owner_id||!x.due_on)issues.push('Assign a deliverable owner and due date.');for(const c of x.checkpoints){if(!c.acceptance_criteria?.trim()||!c.reviewer_id||!c.due_on)issues.push('Complete checkpoint criteria, reviewer and due date.');}}
- if(g.assignment_state==='pending')issues.unshift('Accept the assigned workstream before completing the plan.');
+ if(g.assignment_state==='pushed_back')issues.unshift('Waiting for the assigning leader to clarify and resend this remit.');
+ else if(g.assignment_state==='pending')issues.unshift('Accept the assigned workstream before completing the plan.');
  else if(status(g)==='returned')issues.unshift('Address the approver’s feedback and resubmit this version.');
  else if(status(g)==='draft'&&!issues.length)issues.push('Submit this draft to establish an approved baseline.');
  return [...new Set(issues)];

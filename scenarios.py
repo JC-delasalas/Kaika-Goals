@@ -149,10 +149,15 @@ def derive(x,as_of):
   version=next((v for v in x['versions'] if v['id']==g['active_version_id']),{})
   delivery_based=version.get('success_basis','outcome')=='delivery'
   objective_state=('achieved' if h=='complete' else h) if delivery_based else 'achieved' if h=='complete' and o['target_met'] else 'outcome_pending' if h=='complete' else 'target_met_delivery_open' if o['target_met'] else h
+  if version.get('success_basis')=='metric':
+   objective_state='unknown' if not g.get('active_version_id') or o['measurement_state'] in ['not_measured','invalid'] else 'achieved' if o['target_met'] else 'at_risk' if o['measurement_state']=='stale' or version.get('ends_on','9999')<as_of else 'on_track'
+   if objective_state!='achieved' and manual and manual['health'] in ['blocked','at_risk']:objective_state=manual['health']
+   x['progress'][-1]['calculated_health']=objective_state
+   x['progress'][-1]['reason']='Current approved metric targets are met.' if o['target_met'] else 'A current observation is required.' if o['measurement_state'] in ['not_measured','stale','invalid'] else 'Measured improvement has not yet reached the approved target.'
   x['progress'][-1]['objective_state']=objective_state
   if objective_state=='outcome_pending':x['progress'][-1]['reason']='Delivery accepted; '+('outcome has not been measured.' if o['outcome_pct'] is None else 'refresh the overdue outcome observation.' if o['measurement_state']=='stale' else 'the measured outcome is still below target. Review the remaining gap.')
-  elif objective_state=='achieved':x['progress'][-1]['reason']='All agreed deliverables accepted. This delivery-based goal has achieved its approved success criteria.' if delivery_based else 'All delivery checkpoints accepted and current outcome observations meet the approved targets.'
-  x['progress'][-1]['success_basis']='delivery' if delivery_based else 'outcome'
+  elif objective_state=='achieved' and version.get('success_basis')!='metric':x['progress'][-1]['reason']='All agreed deliverables accepted. This delivery-based goal has achieved its approved success criteria.' if delivery_based else 'All delivery checkpoints accepted and current outcome observations meet the approved targets.'
+  x['progress'][-1]['success_basis']=version.get('success_basis','outcome')
  return x
 
 

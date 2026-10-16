@@ -67,10 +67,14 @@ def new_version(f,leader,g,v):
   for row in list(f.db[key]):
    if row['version_id']==v['id']:
     clone=copy.deepcopy(row);clone.update(id=str(uuid.uuid4()),version_id=nv['id']);f.db[key].append(clone)
+ delivery_ids={}
  for d in list(f.db['deliverables']):
   if d['version_id']==v['id']:
    clone=copy.deepcopy(d);clone.update(id=str(uuid.uuid4()),version_id=nv['id'],demo_signal='in_progress');f.db['deliverables'].append(clone)
+   delivery_ids[d['id']]=clone['id']
    for c in list(f.db['checkpoints']):
     if c['deliverable_id']==d['id']:
      cc=copy.deepcopy(c);cc.update(id=str(uuid.uuid4()),deliverable_id=clone['id']);f.db['checkpoints'].append(cc)
+ for a in f.db['allocations']:
+  if a['version_id']==nv['id'] and a.get('deliverable_id'):a['deliverable_id']=delivery_ids.get(a['deliverable_id'])
  return {'goal_id':g['id']}

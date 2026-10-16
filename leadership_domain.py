@@ -2,7 +2,7 @@
 import copy,uuid,datetime,math
 from demo_mutations import require
 KEYS=['saved_views','reflections','replies','followups','kpis','kpi_readings']
-ACTIONS={'save_view','delete_view','record_question','reply_question','close_question','record_decision','record_learning','create_followup','complete_followup','publish_snapshot','record_kpi','accept_assignment'}
+ACTIONS={'save_view','delete_view','record_question','reply_question','close_question','record_decision','record_learning','create_followup','complete_followup','publish_snapshot','record_kpi','accept_assignment','pushback_assignment','resend_assignment'}
 def ensure(f):
  for k in KEYS:f.db.setdefault(k,[])
 def scope_extra(x,l,gids,vids):
@@ -56,6 +56,15 @@ def handle(f,l,action,p):
  gid=p.get('goal_id');require(gid in gids,'Goal is outside this reporting scope.',403)
  g=next(g for g in f.db['goals'] if g['id']==gid);v=max([v for v in f.db['versions'] if v['goal_id']==gid],key=lambda v:v['version_no'])
  record=dict(id=rid,goal_id=gid,created_at=ts)
+ if action in ['pushback_assignment','resend_assignment']:
+  if action=='pushback_assignment':
+   require(v['owner_id']==l and g.get('assignment_state')=='pending','Only the assigned owner can push back a pending remit.',403)
+   reason=text(p,'reason');g.update(assignment_state='pushed_back',assignment_reason=reason)
+  else:
+   require(g.get('assigned_by')==l and g.get('assignment_state')=='pushed_back','Only the assigning leader can resend this remit.',403)
+   reason=text(p,'reason');g.update(assignment_state='pending',assignment_response=reason)
+  f.db['decisions'].append(dict(record,decision='Assignment pushed back' if action=='pushback_assignment' else 'Assignment resent',rationale=reason,decided_at=ts,decided_by=l))
+  return {'goal_id':gid}
  if action=='accept_assignment':
   require(v['owner_id']==l and g.get('assignment_state')=='pending','Only the assigned owner can accept this workstream.',403)
   g.update(assignment_state='accepted',accepted_at=ts);return {'goal_id':gid}

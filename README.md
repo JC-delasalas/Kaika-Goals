@@ -51,6 +51,10 @@ The CI template in `docs/ci-verify.yml` uses synthetic data only. To activate it
 
 Approved goals open the Charter; unfinished goals open setup. See [behavior and connected verification](docs/GOAL-CHARTER.md).
 
+## Goal registration
+
+Five-step setup supports initiated and inherited goals, reasoned pushback, metric-only/delivery/combined contracts and deliverable-linked resources. See [workflow and verification](docs/GOAL-REGISTRATION.md).
+
 ## Source provenance
 
 The small Oslo kommune OKR helper in `vendor/` is derived from `oslokommune/okr-tracker` revision `06d87896644280771549c8c1c9212c11ea1f665f`. Its MIT notice and attribution are retained. Perdoo informed product patterns only; its code and assets were not copied. Third-party licenses do not grant a license to all original application code.

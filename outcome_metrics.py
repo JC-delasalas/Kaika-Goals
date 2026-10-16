@@ -28,7 +28,7 @@ def record_reading(f,leader,p,g):
  import uuid
  v=next((v for v in f.db['versions'] if v['id']==g['active_version_id']),None)
  require(v is not None and v['owner_id']==leader,'Only the approved goal owner can record an observation.',403)
- require(v.get('success_basis','outcome')=='outcome','Delivery-based goals complete through accepted checkpoints; outcome readings do not apply.')
+ require(v.get('success_basis','outcome') in ['outcome','metric','combined'],'Delivery-based goals complete through accepted checkpoints; outcome readings do not apply.')
  m=next((m for m in f.db['measures'] if m['id']==p.get('measure_id') and m['version_id']==v['id']),None)
  require(m is not None,'Measure must belong to the active goal version.')
  try:value=float(p['value'])

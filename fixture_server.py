@@ -146,6 +146,7 @@ class Fixture:
     result=update_delivery(self,l,p) if action=='demo_delivery_status' else evidence_note(self,l,p)
    elif action=='create_goal':
     if p['owner_id'] not in self.scope(l):return 403,{'error':'Owner outside scope'},{}
+    require(str(p.get('title','')).strip(),'Enter a goal title.')
     parent=p.get('parent_id') or None
     require(p['level'] in ['corporate','department','team'],'Choose an organizational level.')
     if parent:
@@ -154,7 +155,7 @@ class Fixture:
     if p['owner_id']!=l:
      require(parent and any(v['goal_id']==parent and v['owner_id']==l for v in self.db['versions']),'Assign a workstream beneath a goal you own.')
     g=self.new_goal(p['owner_id'],p['title'],p['level'],parent);g.update(hierarchy_model='workstream-delivery',node_kind='workstream' if parent else 'objective');nv=self.db['versions'][-1]
-    nv.update(description='',starts_on='',ends_on='',category=str(p.get('category') or nv['category'])[:120],pillar=str(p.get('pillar') or '')[:200])
+    nv.update(description='',starts_on='',ends_on='',success_basis='metric',registration_contract=2,category=str(p.get('category') or nv['category'])[:120],pillar=str(p.get('pillar') or '')[:200])
     if parent:nv['pillar']=max((v for v in self.db['versions'] if v['goal_id']==parent),key=lambda v:v['version_no']).get('pillar','')
     if p['owner_id']!=l:g.update(origin='inherited',assignment_state='pending',assigned_by=l);nv.update(approver_id=l,approver_name=next(p['name'] for p in self.people if p['id']==l))
     result={'goal_id':g['id']}
@@ -178,8 +179,10 @@ class Fixture:
     elif action=='save_draft':
      require(v['owner_id']==l and v['state']=='draft','Only the owner can edit a draft.',403)
      require(not p.get('deliverables') or g.get('hierarchy_model')!='workstream-delivery' or g.get('node_kind')=='workstream','Attach deliverables to a workstream beneath this objective.')
+     require(g.get('assignment_state') not in ['pending','pushed_back'],'Accept the inherited remit before editing setup.')
      require(v['edit_revision']==p.get('edit_revision'),'This draft has changed. Refresh and try again.',409)
-     require(p.get('success_basis',basis(v)) in ['delivery','outcome'],'Choose a valid success basis.')
+     require(p.get('success_basis',basis(v)) in ['delivery','outcome','metric','combined'],'Choose a valid success basis.')
+     if p.get('registration_contract')==2:v['registration_contract']=2
      v['success_basis']=p.get('success_basis',basis(v));v['pillar']=str(p.get('pillar',v.get('pillar','')))[:120]
      for k in ['title','description','starts_on','ends_on','priority','category','cadence']:v[k]=p[k]
      v['edit_revision']+=1
@@ -190,15 +193,21 @@ class Fixture:
       kc={key:value for key,value in k.items() if key not in ['id','version_id']}
       self.db['kpis'].append(dict(kc,id=str(uuid.uuid4()),version_id=v['id']))
      for m in p['measures']:self.db['measures'].append(dict(m,id=str(uuid.uuid4()),version_id=v['id'],source_definition=m['source']))
+     delivery_ids={}
      for d in p['deliverables']:
-      did=str(uuid.uuid4());dc={k:vv for k,vv in d.items() if k not in ['id','version_id','checkpoints']};self.db['deliverables'].append(dict(dc,id=did,version_id=v['id']))
+      did=str(uuid.uuid4());delivery_ids[d.get('id') or d.get('client_id')]=did
+      dc={k:vv for k,vv in d.items() if k not in ['id','version_id','checkpoints']};self.db['deliverables'].append(dict(dc,id=did,version_id=v['id']))
       for c in d['checkpoints']:
        cc={k:vv for k,vv in c.items() if k not in ['id','deliverable_id','reviewer_id']}
        self.db['checkpoints'].append(dict(cc,id=str(uuid.uuid4()),deliverable_id=did,reviewer_id=v['approver_id']))
-     for a in p.get('allocations',[]):self.db['allocations'].append(dict(a,version_id=v['id']))
+     for a in p.get('allocations',[]):
+      ac={k:value for k,value in a.items() if k not in ['id','version_id','deliverable_id']}
+      linked=a.get('deliverable_id')
+      require(not linked or linked in delivery_ids,'A resource references a removed or unrelated deliverable.')
+      self.db['allocations'].append(dict(ac,id=str(uuid.uuid4()),version_id=v['id'],deliverable_id=delivery_ids.get(linked)))
     elif action=='submit':
      require(v['owner_id']==l and v['state']=='draft','Only the owner can submit a draft.',403)
-     require(g.get('assignment_state')!='pending','Accept this inherited workstream before submitting its breakdown.')
+     require(g.get('assignment_state') not in ['pending','pushed_back'],'Accept this inherited workstream before submitting its breakdown.')
      validate_plan(self,v)
      v['state']='submitted'
     elif action=='approve':
