@@ -39,3 +39,7 @@ One old file-entry assertion still expected the removed Overview route. It was c
 ## Limitations
 
 No production authentication, multi-tenant rollout, concurrent capacity certification, malware scanning, actual-cost integration or WCAG conformance claim is included. The setup limitations recorded on 15 October were subsequently addressed by Goal Charter and Registration on 16 October. See GOAL-REGISTRATION.md, CROSS-TAB-CONSISTENCY.md and HIERARCHY-AND-NEXT-BUILD.md for later evidence and remaining gates.
+
+## Save recovery follow-up · 16 October 2026
+
+Connected tests now cover failure before sending, lost confirmation after real commits, create/check-in/approval/question/upload deduplication, two-tab draft conflicts, local undo/redo and revision-checked saved-draft undo. The latest run passed 13 UI suites and 63 Python tests. See [SAVE-AND-RECOVERY.md](SAVE-AND-RECOVERY.md) for precise scenarios, storage limits and remaining production gates.

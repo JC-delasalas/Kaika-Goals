@@ -60,3 +60,7 @@ Five-step setup supports initiated and inherited goals, reasoned pushback, metri
 The small Oslo kommune OKR helper in `vendor/` is derived from `oslokommune/okr-tracker` revision `06d87896644280771549c8c1c9212c11ea1f665f`. Its MIT notice and attribution are retained. Perdoo informed product patterns only; its code and assets were not copied. Third-party licenses do not grant a license to all original application code.
 
 See [cross-tab consistency and avatar verification](docs/CROSS-TAB-CONSISTENCY.md) for the Summary, Hierarchy and Hygiene audit.
+
+## Save recovery and Undo
+
+Failed draft saves retain their inputs. Unconfirmed writes can be retried with the same operation ID; revision conflicts offer an explicit comparison. Goal setup includes Undo edit, Redo edit and Undo last saved draft, with newer revisions protected from stale restores. Private evidence uploads retain a stable retry identity across refreshes. See [save recovery behavior and verification](docs/SAVE-AND-RECOVERY.md).

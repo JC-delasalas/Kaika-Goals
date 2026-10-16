@@ -62,7 +62,7 @@ async function demoAction(action,button){
  if(action==='confirm-load'){
   if(busy||loading)throw Error('Wait for the current operation to finish.');
   const preset=$('demo-preset').value;busy=true;
-  try{await request('demo_scenario',{preset});const roster=await request('leaders');leaders=roster.leaders;if(!leaders.some(p=>p.id===leader))leader=leaders[0]?.id;$('leader').innerHTML=leaders.map(p=>'<option value="'+p.id+'" '+(p.id===leader?'selected':'')+'>'+esc(p.name)+' · '+esc(p.team)+'</option>').join('');dirty=false;draft=null;draftGoal='';pendingCommand=null;leadershipState.clear();location.hash='/portfolio';await refresh();if(problem)throw Error(problem);notifyDemoChange();demoRender();toast('Loaded '+demoLabels[preset]+'.')}finally{busy=false}return;
+  try{await request('demo_scenario',{preset});const roster=await request('leaders');leaders=roster.leaders;if(!leaders.some(p=>p.id===leader))leader=leaders[0]?.id;$('leader').innerHTML=leaders.map(p=>'<option value="'+p.id+'" '+(p.id===leader?'selected':'')+'>'+esc(p.name)+' · '+esc(p.team)+'</option>').join('');dirty=false;draft=null;draftGoal='';leadershipState.clear();location.hash='/portfolio';await refresh();if(problem)throw Error(problem);notifyDemoChange();demoRender();toast('Loaded '+demoLabels[preset]+'.')}finally{busy=false}return;
  }
  if(action==='screenshot'){downloadDemo(captureDemoView(),'kaika-'+route()+'-screenshot.svg','image/svg+xml');toast('View saved as SVG. Open in a browser to view.');return}
  if(action==='attach'){demoShot=captureDemoView();demoReportContext=demoContext();$('demo-panel').querySelector('.demo-shot-state').textContent='Current view attached (SVG).';return}

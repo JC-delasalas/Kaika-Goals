@@ -9,7 +9,7 @@ function demoDeliveryControls(d,g,v){
 async function changeDemoPersona(workerId,goalId,deliverableId){
  if(!['fixture','supabase-demo'].includes(mode))throw Error('Persona shortcuts are for synthetic demos only.');
  if(!leaders.some(p=>p.id===workerId))throw Error('This owner is not available in the preview switcher.');
- leader=workerId;if($('leader-search'))$('leader-search').value='';renderLeaderOptions();$('leader').value=leader;sessionStorage.setItem('kaika-preview-leader',leader);epoch++;data=null;draft=null;dirty=false;draftGoal='';pendingCommand=null;$('dialog').close();
+ leader=workerId;if($('leader-search'))$('leader-search').value='';renderLeaderOptions();$('leader').value=leader;sessionStorage.setItem('kaika-preview-leader',leader);epoch++;data=null;draft=null;dirty=false;draftGoal='';$('dialog').close();
  location.hash='/overview';await refresh();location.hash=deliverableId&&assignedItem(deliverableId)?'/assigned/'+deliverableId:'/plans/'+goalId+'/delivery';
 }
 async function deliveryAction(action,id){

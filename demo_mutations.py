@@ -61,7 +61,7 @@ def validate_upload(f,leader,deliverable,checkpoint,body,mime):
 def new_version(f,leader,g,v):
  require(v['owner_id']==leader,'Only the owner can propose a new version.',403)
  require(v['state']!='draft','An editable draft already exists.')
- nv=copy.deepcopy(v);nv.update(id=str(uuid.uuid4()),version_no=v['version_no']+1,state='draft',edit_revision=0)
+ nv=copy.deepcopy(v);nv.update(id=str(uuid.uuid4()),version_no=v['version_no']+1,state='draft',edit_revision=0,edit_events=[])
  f.db['versions'].append(nv)
  for key in ['measures','allocations','kpis']:
   for row in list(f.db[key]):

@@ -177,6 +177,8 @@ class Fixture:
     result={'id':pid}
    else:
     g=next(g for g in self.state(l)['goals'] if g['id']==p['goal_id']);v=sorted([v for v in self.db['versions'] if v['goal_id']==g['id']],key=lambda x:x['version_no'])[-1]
+    if action in ['save_draft','submit','approve','new_version'] and p.get('expected_version_id'):
+     require(v['id']==p['expected_version_id'],'The goal version has changed. Your entries were not saved. Review the latest version before continuing.',409)
     if action=='new_version':result=new_version(self,l,g,v)
     elif action=='checkin':
      require(v['owner_id']==l and p.get('health') in ['on_track','at_risk','blocked','unknown'],'Only the owner can record a valid check-in.',403)
@@ -191,12 +193,14 @@ class Fixture:
      require(v['owner_id']==l and v['state']=='draft','Only the owner can edit a draft.',403)
      require(not p.get('deliverables') or g.get('hierarchy_model')!='workstream-delivery' or g.get('node_kind')=='workstream','Attach deliverables to a workstream beneath this objective.')
      require(g.get('assignment_state') not in ['pending','pushed_back'],'Accept the inherited remit before editing setup.')
-     require(v['edit_revision']==p.get('edit_revision'),'This draft has changed. Refresh and try again.',409)
+     require(v['edit_revision']==p.get('edit_revision'),'This draft has a newer saved edit. Your entries were not saved. Compare them with the latest draft before continuing.',409)
      require(p.get('success_basis',basis(v)) in ['delivery','outcome','metric','combined'],'Choose a valid success basis.')
      if p.get('registration_contract')==2:v['registration_contract']=2
      v['success_basis']=p.get('success_basis',basis(v));v['pillar']=str(p.get('pillar',v.get('pillar','')))[:120]
      for k in ['title','description','starts_on','ends_on','priority','category','cadence']:v[k]=p[k]
+     if p.get('undo_of_revision') is not None:require(p['undo_of_revision']==v['edit_revision'],'The draft changed after that save. Undo cannot overwrite the newer edit.',409)
      v['edit_revision']+=1
+     v.setdefault('edit_events',[]).append(dict(revision=v['edit_revision'],actor_id=l,reason='undo' if p.get('undo_of_revision') is not None else 'save',recorded_at=datetime.datetime.now(datetime.timezone.utc).isoformat()))
      oldd={d['id'] for d in self.db['deliverables'] if d['version_id']==v['id']}
      for key in ['deliverables','measures','allocations','kpis']:self.db[key]=[d for d in self.db[key] if d['version_id']!=v['id']]
      self.db['checkpoints']=[c for c in self.db['checkpoints'] if c['deliverable_id'] not in oldd]
@@ -217,6 +221,7 @@ class Fixture:
       require(not linked or linked in delivery_ids,'A resource references a removed or unrelated deliverable.')
       self.db['allocations'].append(dict(ac,id=str(uuid.uuid4()),version_id=v['id'],deliverable_id=delivery_ids.get(linked)))
     elif action=='submit':
+     if p.get('edit_revision') is not None:require(v['edit_revision']==p['edit_revision'],'This draft changed before submission. Review the latest saved plan first.',409)
      require(v['owner_id']==l and v['state']=='draft','Only the owner can submit a draft.',403)
      require(g.get('assignment_state') not in ['pending','pushed_back'],'Accept this inherited workstream before submitting its breakdown.')
      validate_plan(self,v)

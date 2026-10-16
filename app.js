@@ -1,6 +1,6 @@
 'use strict';
 const $=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-let data=null,leaders=[],leader='',nonce='',mode='',loading=false,busy=false,epoch=0,draft=null,draftGoal='',step=0,dirty=false,problem='',pendingCommand=null;
+let data=null,leaders=[],leader='',nonce='',mode='',loading=false,busy=false,epoch=0,draft=null,draftGoal='',step=0,dirty=false,problem='';
 function renderLeaderOptions(){
  const query=($('leader-search')?.value||'').trim().toLowerCase();
  const matches=leaders.filter(p=>(p.name+' '+p.title+' '+p.team).toLowerCase().includes(query));
@@ -51,11 +51,15 @@ if(demoSync)demoSync.onmessage=()=>syncVisibleDemo();
 window.addEventListener('focus',()=>syncVisibleDemo());
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)syncVisibleDemo()});
 async function request(action,payload={},mutate=false){
- const body={action,leader_id:leader||null,data:payload};
- if(mutate){const signature=JSON.stringify(body);if(!pendingCommand||pendingCommand.signature!==signature)pendingCommand={signature,id:crypto.randomUUID()};body.mutation_id=pendingCommand.id}
- const response=await localFetch('/api/command',{method:'POST',headers:{'Content-Type':'application/json','X-Kaika-Nonce':nonce},body:JSON.stringify(body)});
- const result=await response.json();if(!response.ok)throw Error(result.error||result.message||'Database request failed');
- if(mutate)pendingCommand=null;return result;
+ const op=mutate?recoveryPrepare(action,payload):null;
+ const body={action,leader_id:leader||null,data:op?.payload||payload,...(op?{mutation_id:op.id}:{})};
+ try{
+  if(op&&typeof recoveryFaultAt==='function')recoveryFaultAt('before');
+  const response=await localFetch('/api/command',{method:'POST',headers:{'Content-Type':'application/json','X-Kaika-Nonce':nonce},body:JSON.stringify(body)});
+  const result=await response.json();if(!response.ok)throw recoveryError(result.error||result.message||'Database request failed',response.status);
+  if(op&&typeof recoveryFaultAt==='function')recoveryFaultAt('after');
+  if(op)recoveryConfirmed(op,result);return result;
+ }catch(error){if(op)recoveryFailed(op,error);throw error}
 }
 async function refresh(){
  const own=++epoch,selected=leader;loading=true;problem='';render();
@@ -64,10 +68,19 @@ async function refresh(){
  finally{if(own===epoch){loading=false;render()}}
 }
 async function command(action,payload){
- if(busy)return;busy=true;$('leader').disabled=true;
- try{const result=await request(action,payload,true);toast('Saved in '+(mode==='fixture'?'local test fixture':'Supabase'));dirty=false;draft=null;if(result._state){data=result._state;problem='';render()}else await refresh();notifyDemoChange();return result;}
- catch(e){toast(errorText(e));throw e}
- finally{busy=false;$('leader').disabled=false;}
+ if(busy)throw recoveryError('A save is already in progress. Please wait for confirmation.',425);
+ recoveryFormInFlight=typeof recoveryCurrentFormKey==='function'?recoveryCurrentFormKey():'';
+ busy=true;$('leader').disabled=true;
+ const controls=[...document.querySelectorAll('main input,main select,main textarea,main button,dialog input,dialog select,dialog textarea,dialog button')].map(el=>[el,el.disabled]);
+ controls.forEach(([el])=>el.disabled=true);
+ if(typeof recoveryPaint==='function')recoveryPaint('Saving… Waiting for database confirmation.');
+ try{
+  const result=await request(action,payload,true);
+  if(action==='save_draft'&&draftGoal===payload.goal_id){dirty=false;draft=null;if(typeof recoveryResetHistory==='function')recoveryResetHistory()}
+  if(result._state){data=result._state;problem='';render()}else await refresh();
+  toast('Saved in '+(mode==='fixture'?'local test fixture':'Supabase'));notifyDemoChange();return result;
+ }catch(error){if(typeof recoveryPaint==='function')recoveryPaint();toast(errorText(error));throw error}
+ finally{recoveryFormInFlight='';busy=false;$('leader').disabled=false;controls.forEach(([el,disabled])=>{if(el.isConnected)el.disabled=disabled});if(typeof recoveryPaint==='function')recoveryPaint();}
 }
 function renderFileStart(){
  $('leader').disabled=true;$('leader').innerHTML='<option>Open the connected app to choose a leader</option>';$('leader-search').disabled=true;
@@ -116,7 +129,7 @@ function plans(){
  function node(g,depth=0){if(seen.has(g.id))return'';seen.add(g.id);const v=latest(g.id);return '<div class="tree-node" style="--depth:'+Math.min(depth,5)+'"><div class="tree-card"><small>'+esc(g.level)+' · '+esc(g.origin)+' · '+basisLabel(approved(g.id)||v)+(g.alignment_hidden?' · parent context restricted':'')+'</small><h3>'+link(v.title,'plans/'+g.id)+'</h3><p>'+personLabel(v.owner_id)+' · '+esc(v.ends_on)+'</p><div>'+badge(status(g))+' '+progress(data.progress.find(x=>x.root_id===g.id)?.delivery_pct)+'</div></div>'+goals().filter(c=>c.parent_id===g.id).map(c=>node(c,depth+1)).join('')+'</div>'}
  return heading('Plans','Your objectives and the workstreams owned by your reporting teams.',btn('Create or assign goal','new','',true))+'<div class="notice">One goal, two faces: a workstream assigned by a leader becomes its owner’s objective. Submitted versions lock effort, measures and acceptance criteria.</div><div class="plan-tree">'+roots.map(g=>node(g)).join('')+'</div>';}
 function newGoal(){return heading('Create or assign a goal','Start the identity and alignment, then complete the full setup tabs.')+'<form id="create-goal" class="panel"><div class="panelbody">'+plainField('Goal title','title','','text','Example: Reduce recurring data-quality failures by 35%')+'<div class="formrow"><label class="formfield">Goal owner<select name="owner_id" id="new-owner">'+data.people.map(p=>'<option value="'+p.id+'" '+(p.id===leader?'selected':'')+'>'+esc(p.name)+'</option>').join('')+'</select><small>Choose yourself to initiate, or a team member to assign a workstream.</small></label><label class="formfield">Organizational level<select name="level" id="new-level"><option value="team">Team goal</option><option value="department">Department goal</option><option value="corporate">Corporate goal</option></select></label></div><label class="formfield">Parent goal<select name="parent_id" id="new-parent"></select><small>Corporate goals have no parent. Department goals align to corporate goals; team goals align to department or team goals. Assigned workstreams must use a goal you own.</small></label><div class="tools"><button class="btn primary">Create draft and continue</button>'+link('Cancel','plans')+'</div><p id="form-error" class="formerror" role="alert"></p></div></form>'}
-function alignOptions(){const f=$('create-goal');if(!f)return;const own=$('new-owner').value;let lv=$('new-level').value;const corporate=$('new-level').querySelector('[value="corporate"]');if(corporate)corporate.disabled=own!==leader;if(own!==leader&&lv==='corporate'){$('new-level').value='team';lv='team'}$('new-parent').required=own!==leader;const options=data.goals.filter(g=>(lv==='department'?g.level==='corporate':lv==='team'?['team','department'].includes(g.level):false)&&(own===leader||latest(g.id).owner_id===leader));$('new-parent').innerHTML=(own===leader?'<option value="">'+(lv==='corporate'?'Corporate root goal':'Standalone '+lv+' goal')+'</option>':'<option value="">Choose your parent goal</option>')+options.map(g=>'<option value="'+g.id+'">'+esc(latest(g.id).title)+'</option>').join('');$('new-parent').disabled=lv==='corporate';}
+function alignOptions(){const f=$('create-goal');if(!f)return;const previousParent=$('new-parent').value,own=$('new-owner').value;let lv=$('new-level').value;const corporate=$('new-level').querySelector('[value="corporate"]');if(corporate)corporate.disabled=own!==leader;if(own!==leader&&lv==='corporate'){$('new-level').value='team';lv='team'}$('new-parent').required=own!==leader;const options=data.goals.filter(g=>(lv==='department'?g.level==='corporate':lv==='team'?['team','department'].includes(g.level):false)&&(own===leader||latest(g.id).owner_id===leader));$('new-parent').innerHTML=(own===leader?'<option value="">'+(lv==='corporate'?'Corporate root goal':'Standalone '+lv+' goal')+'</option>':'<option value="">Choose your parent goal</option>')+options.map(g=>'<option value="'+g.id+'">'+esc(latest(g.id).title)+'</option>').join('');$('new-parent').disabled=lv==='corporate';if([...$('new-parent').options].some(o=>o.value===previousParent))$('new-parent').value=previousParent;}
 function goalPage(id,tab='setup'){
  const g=data.goals.find(g=>g.id===id);if(!g)return heading('Goal not available','This goal is outside the selected leader’s scope.');
  const v=latest(id),base=approved(id),canEdit=v.owner_id===leader&&v.state==='draft',isApprover=v.approver_id===leader,decision=data.approvals.find(a=>a.version_id===v.id);
@@ -133,7 +146,7 @@ function goalPage(id,tab='setup'){
  else content=panel('Version and approval history',table(['Version','State','Approver','Decision'],data.versions.filter(x=>x.goal_id===g.id).sort((a,b)=>b.version_no-a.version_no).map(x=>{const a=data.approvals.find(a=>a.version_id===x.id);return['v'+x.version_no,badge(x.state),esc(x.approver_name),a?badge(a.decision)+'<small>'+esc(a.reason)+'</small>':'No decision']})));
  return '<div class="breadcrumb">'+link('Plans','plans')+' / '+esc(g.level)+'</div>'+heading(v.title,name(v.owner_id)+' · '+g.origin+' · '+(g.alignment_hidden?'Parent context restricted':'Your reporting scope'),actions)+nav+(base&&base.id!==v.id?'<div class="notice">Approved v'+base.version_no+' ('+basisLabel(base)+') still controls progress. Version '+v.version_no+' ('+basisLabel(v)+') takes effect only after approval.</div>':'')+content;
 }
-function makeDraft(g,v){return{goal_id:g.id,edit_revision:v.edit_revision,title:v.title,description:v.description,starts_on:v.starts_on,ends_on:v.ends_on,priority:v.priority,category:v.category,cadence:v.cadence,success_basis:successBasis(v),
+function makeDraft(g,v){return{goal_id:g.id,expected_version_id:v.id,edit_revision:v.edit_revision,title:v.title,description:v.description,starts_on:v.starts_on,ends_on:v.ends_on,priority:v.priority,category:v.category,cadence:v.cadence,success_basis:successBasis(v),
  measures:data.measures.filter(m=>m.version_id===v.id).map(m=>({...m,source:m.source_definition})),
  deliverables:data.deliverables.filter(d=>d.version_id===v.id).map(d=>({...d,checkpoints:data.checkpoints.filter(c=>c.deliverable_id===d.id).map(c=>({...c}))})),
  allocations:data.allocations.filter(a=>a.version_id===v.id).map(a=>({...a}))}}
@@ -210,8 +223,8 @@ document.addEventListener('input',e=>readDraftInput(e.target));
 document.addEventListener('change',e=>{readDraftInput(e.target);if(e.target.dataset.path==='success_basis'&&$('basis-explanation'))$('basis-explanation').innerHTML=basisHelp();if(['new-level','new-owner'].includes(e.target.id))alignOptions()});
 $('leader').addEventListener('change',async e=>{
  if(busy){e.target.value=leader;return}
- if(dirty&&!confirm('Discard unsaved draft changes and switch leader?')){e.target.value=leader;return}
- leader=e.target.value;if($('leader-search'))$('leader-search').value='';renderLeaderOptions();sessionStorage.setItem('kaika-preview-leader',leader);epoch++;data=null;draft=null;dirty=false;pendingCommand=null;draftGoal='';$('dialog').close();location.hash='/portfolio';await refresh();
+ if(dirty&&!confirm('Switch leader? Your unsaved draft entries will be retained in this browser tab.')){e.target.value=leader;return}
+ leader=e.target.value;if($('leader-search'))$('leader-search').value='';renderLeaderOptions();sessionStorage.setItem('kaika-preview-leader',leader);epoch++;data=null;draft=null;dirty=false;draftGoal='';$('dialog').close();location.hash='/portfolio';await refresh();
 });
 $('leader-search')?.addEventListener('input',renderLeaderOptions);
 document.addEventListener('submit',async e=>{
@@ -222,15 +235,16 @@ document.addEventListener('submit',async e=>{
  else if(f.classList.contains('upload-form')){
  const file=f.elements.evidence.files[0];if(!file)throw Error('Choose an evidence file.');if(file.size>20*1024*1024)throw Error('File exceeds 20 MiB.');
  busy=true;$('leader').disabled=true;const s=f.querySelector('.upload-status');s.textContent='Uploading and verifying private Storage…';f.querySelector('button').disabled=true;
- const signature=file.name+':'+file.size+':'+file.lastModified;if(f.dataset.signature!==signature){f.dataset.signature=signature;f.dataset.uploadId=crypto.randomUUID()}
+ const upload=await recoveryUploadPrepare(f,file,values.checkpoint_id||'');f.dataset.uploadId=upload.id;
  const params=new URLSearchParams({leader,deliverable_id:f.dataset.deliverable,checkpoint_id:values.checkpoint_id||'',upload_id:f.dataset.uploadId});
  const fallback={txt:'text/plain',csv:'text/csv',pdf:'application/pdf',png:'image/png',jpg:'image/jpeg',jpeg:'image/jpeg',docx:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',xlsx:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',pptx:'application/vnd.openxmlformats-officedocument.presentationml.presentation'};
  const mime=file.type||fallback[file.name.split('.').at(-1).toLowerCase()]||'application/octet-stream';
+ recoveryFaultAt('before');
  const response=await localFetch('/api/upload?'+params,{method:'POST',headers:{'Content-Type':mime,'X-Kaika-Nonce':nonce,'X-File-Name':encodeURIComponent(file.name)},body:file});
- const result=await response.json();if(!response.ok)throw Error(result.error||'Upload failed');toast(mode==='fixture'?'Evidence saved in the local test fixture. No acceptance credit yet.':'Evidence saved in the private bucket. No acceptance credit yet.');if(result._state){data=result._state;render()}else await refresh();notifyDemoChange();if(f.dataset.hygiene==='true')$('dialog').close();
+ const result=await response.json();if(!response.ok)throw recoveryError(result.error||'Upload failed',response.status);recoveryFaultAt('after');recoveryUploadConfirmed(f);toast(mode==='fixture'?'Evidence saved in the local test fixture. No acceptance credit yet.':'Evidence saved in the private bucket. No acceptance credit yet.');if(result._state){data=result._state;render()}else await refresh();notifyDemoChange();if(f.dataset.hygiene==='true')$('dialog').close();
  }
- }catch(error){const target=f.querySelector('[role="alert"],.upload-status');if(target)target.textContent=errorText(error);else toast(errorText(error));}
- finally{busy=false;$('leader').disabled=false;f.querySelectorAll('button').forEach(b=>b.disabled=false)}
+ }catch(error){if(f.classList.contains('upload-form'))recoveryUploadFailed(f,error);const target=f.querySelector('[role="alert"],.upload-status');if(target)target.textContent=errorText(error);else toast(errorText(error));}
+ finally{busy=false;$('leader').disabled=false;f.querySelectorAll('button').forEach(b=>b.disabled=false);recoveryPaint()}
 });
 $('dialog-close').addEventListener('click',()=>$('dialog').close());
 window.addEventListener('hashchange',()=>{if($('dialog').open)$('dialog').close();render();alignOptions()});
