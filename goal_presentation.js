@@ -1,7 +1,8 @@
 // Shared presentation only. Progress, authorization and approvals remain server-owned.
-function defaultAvatarImage(id){
+function avatarDefaultStyle(id){return [...String(id||'unassigned')].reduce((n,c)=>(n*31+c.charCodeAt(0))>>>0,0)%6}
+function defaultAvatarImage(id,style=null){
  const palettes=[['#dcece5','#2f7562'],['#e4eafa','#4969a4'],['#f6e8d6','#9a7042'],['#eee4f1','#876395'],['#dcedef','#3f7c86'],['#f2e2df','#a2665b']];
- const hash=[...String(id||'unassigned')].reduce((n,c)=>(n*31+c.charCodeAt(0))>>>0,0),[bg,shirt]=palettes[hash%palettes.length];
+ const hash=[...String(id||'unassigned')].reduce((n,c)=>(n*31+c.charCodeAt(0))>>>0,0),[bg,shirt]=palettes[Number.isInteger(style)&&style>=0&&style<6?style:hash%palettes.length];
  // A generic illustration, not a likeness or an inferred personal characteristic.
  const svg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="32" fill="'+bg+'"/><path d="M8 65v-9c0-12 10-19 24-19s24 7 24 19v9" fill="'+shirt+'"/><path d="M25 35h14v12c-4 5-10 5-14 0" fill="#dfc6a6"/><ellipse cx="32" cy="27" rx="15" ry="17" fill="#f1dbbc"/><path d="M17 25v-5C17 6 45 3 47 22l-1 6-5-10c-5 5-13 7-24 7" fill="#344b49"/><circle cx="27" cy="28" r="1.5" fill="#344b49"/><circle cx="37" cy="28" r="1.5" fill="#344b49"/><path d="M28 35q4 3 8 0" fill="none" stroke="#8b6555" stroke-width="1.5" stroke-linecap="round"/></svg>';
  return 'data:image/svg+xml,'+encodeURIComponent(svg).replaceAll("'",'%27');
@@ -10,8 +11,8 @@ function personAvatar(id){
  const p=person(id),label=p?.name||name(id),initials=label==='Outside current view'?'?':label.trim().split(/\s+/).map(x=>x[0]).slice(0,2).join('').toUpperCase();
  // Only embedded raster photos supplied in the scoped person record are rendered.
  // Do not request employee photos from external hosts or infer a face from a name.
- const photo=p?.photo_data_url,src=typeof photo==='string'&&photo.length<=280000&&/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+=*$/.test(photo)?photo:null;
- return '<span class="person-avatar" role="img" aria-label="'+esc(label+(src?' · profile photo':' · default avatar'))+'" title="'+esc(label)+'"><span aria-hidden="true">'+esc(initials)+'</span>'+'<img src="'+(src||defaultAvatarImage(id))+'" alt="" loading="lazy" decoding="async" width="28" height="28">'+'</span>';
+ const photo=typeof profilePhoto==='function'?profilePhoto(p):p?.photo_data_url,src=typeof photo==='string'&&photo.length<=280000&&/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+=*$/.test(photo)?photo:null;
+ return '<span class="person-avatar" data-profile-person="'+esc(id||'')+'" role="img" aria-label="'+esc(label+(src?' · profile photo':' · default avatar'))+'" title="'+esc(label)+'"><span aria-hidden="true">'+esc(initials)+'</span>'+'<img src="'+(src||defaultAvatarImage(id,p?.avatar_style))+'" alt="" loading="lazy" decoding="async" width="28" height="28">'+'</span>';
 }
 function personLabel(id){return '<span class="person-label">'+personAvatar(id)+'<span>'+esc(name(id))+'</span></span>'}
 function avatarStack(ids,label='Assigned people'){

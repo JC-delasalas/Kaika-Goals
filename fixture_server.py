@@ -80,7 +80,10 @@ class Fixture:
   for key in ['checkins','questions','decisions']:x[key]=[r for r in x[key] if r['goal_id'] in gids]
   mids={m['id'] for m in x['measures']};x['readings']=[r for r in x['readings'] if r['measure_id'] in mids]
   x['people']=[copy.deepcopy(p) for p in self.people if p['id'] in scope]
+  profiles={p['person_id']:p for p in x.pop('profiles',[])}
   for p in x['people']:
+   profile=profiles.get(p['id'],{});p.update({k:v for k,v in profile.items() if k!='photo_data_url'})
+   if profile:p['has_photo']=bool(profile.get('photo_data_url'))
    if p['manager_id'] not in scope:p['manager_id']=None
   x['portfolios']=[p for p in x['portfolios'] if p['owner_id'] in scope];pids={p['id'] for p in x['portfolios']}
   x['portfolio_goals']=[p for p in x['portfolio_goals'] if p['portfolio_id'] in pids and p['goal_id'] in gids]
@@ -133,6 +136,9 @@ class Fixture:
     return 200,self.files[e['id']],{'Content-Type':e['mime_type'],'Content-Disposition':"attachment; filename*=UTF-8''"+urllib.parse.quote(e['original_name'])}
    if action=='leaders':return 200,{'leaders':[dict(p,goal_count=sum(v['owner_id']==p['id'] for v in self.db['versions'])) for p in self.people if True],'source_date':'2026-09-14'},{}
    if action=='state':return 200,self.state(l),{}
+   if action=='profile_photos':
+    ids=p.get('person_ids',[]);require(len(ids)<=24 and set(ids)<=self.scope(l),'Profile is outside this leader scope',403)
+    return 200,{'profiles':[dict(r,revision=r['profile_revision']) for r in self.db.get('profiles',[]) if r['person_id'] in ids]},{}
    if action=='demo_scenario':
     from scenarios import seed
     seed(self,p['preset'])
@@ -140,7 +146,12 @@ class Fixture:
 
    cache_key=str(l)+':'+str(inp.get('mutation_id'))
    if inp.get('mutation_id') and cache_key in self.done:return 200,self.done[cache_key],{}
-   if action in support.ACTIONS:result=support.handle(self,l,action,p)
+   if action=='profile_save':
+    from profile_domain import normalize_profile
+    profile=normalize_profile(l,p);rows=self.db.setdefault('profiles',[]);old=next((r for r in rows if r['person_id']==l),{})
+    require(old.get('profile_revision',0)==profile.pop('expected_revision'),'Your profile changed. Reopen the editor.',409)
+    profile.update(id=l,profile_revision=old.get('profile_revision',0)+1);self.db['profiles']=[r for r in rows if r['person_id']!=l]+[profile];result={'person_id':l}
+   elif action in support.ACTIONS:result=support.handle(self,l,action,p)
    elif action in leadership.ACTIONS:result=leadership.handle(self,l,action,p)
    elif action in ['demo_delivery_status','demo_evidence_note']:
     result=update_delivery(self,l,p) if action=='demo_delivery_status' else evidence_note(self,l,p)

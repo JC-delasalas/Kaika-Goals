@@ -23,7 +23,7 @@ Every person receives a deterministic, generic illustrated avatar generated loca
 
 The shared component accepts a bounded embedded PNG/JPEG/WebP `photo_data_url` from a scoped person record. External URLs and user-supplied SVG are rejected; image failure falls back to initials. The default SVG is generated entirely from application constants. No third-party avatar service, new public bucket, or access expansion is involved.
 
-The current Workday import contains no photos. A profile editor, avatar selection persistence and Workday photo synchronization are later work; they are not claimed as implemented by this presentation change.
+The current Workday import contains no photos. Profile editing, avatar selection and private thumbnail persistence are now implemented; see PROFILES-AND-QUARTERLY-SUMMARY.md. Workday photo synchronization remains later work.
 
 ## Verification
 

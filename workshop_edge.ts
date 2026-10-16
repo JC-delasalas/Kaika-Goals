@@ -7,7 +7,7 @@ const bucket='kaika-deliverable-evidence',MAX=20*1024*1024;
 const hash=async(b:Uint8Array)=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new Uint8Array(b).buffer)),x=>x.toString(16).padStart(2,'0')).join('');
 class Failure extends Error{constructor(message:string,public status=400){super(message)}}
 const json=(data:unknown,status=200)=>new Response(JSON.stringify(data),{status,headers:{'Content-Type':'application/json','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
-async function rpc(token:string,action:string,data:unknown={}){const r=await fetch(BASE+'/rest/v1/rpc/kaika_workshop_store',{method:'POST',headers:{...admin,'Content-Type':'application/json'},body:JSON.stringify({p_hash:token,p_action:action,p_data:data})});const body=await r.json();if(!r.ok)throw new Failure(body.message||'Database request failed',r.status);return body}
+async function rpc(token:string,action:string,data:unknown={},profile=false){const r=await fetch(BASE+'/rest/v1/rpc/'+(profile?'kaika_workshop_profile':'kaika_workshop_store'),{method:'POST',headers:{...admin,'Content-Type':'application/json'},body:JSON.stringify({p_hash:token,p_action:action,p_data:data})});const body=await r.json();if(!r.ok)throw new Failure(body.message||'Database request failed',r.status);return body}
 async function bytes(req:Request,limit:number){if(Number(req.headers.get('content-length'))>limit)throw new Failure('Request too large',413);const reader=req.body?.getReader();if(!reader)throw new Failure('Empty request');let size=0;const chunks=[];while(true){const {done,value}=await reader.read();if(done)break;size+=value.length;if(size>limit){await reader.cancel();throw new Failure('Request too large',413)}chunks.push(value)}const out=new Uint8Array(size);let offset=0;for(const part of chunks){out.set(part,offset);offset+=part.length}return out}
 function validFile(b:Uint8Array,mime:string){
  const types=['application/pdf','image/png','image/jpeg','text/plain','text/csv','application/vnd.openxmlformats-officedocument.wordprocessingml.document','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','application/vnd.openxmlformats-officedocument.presentationml.presentation'];
@@ -41,6 +41,7 @@ export async function handler(req:Request){try{
   const r=await fetch(BASE+'/storage/v1/object/authenticated/'+bucket+'/'+file.object_path,{headers:admin});if(!r.ok)throw new Failure('Private evidence unavailable',404);
   return new Response(r.body,{headers:{'Content-Type':file.mime_type,'Content-Disposition':"attachment; filename*=UTF-8''"+encodeURIComponent(file.original_name),'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
  }
+ if(['profile_save','profile_photos'].includes(action))return json(await rpc(digest,action==='profile_save'?'save':'photos',input,true));
  if(!['load','commit','lookup'].includes(action))throw new Failure('Unsupported operation');
  return json(await rpc(digest,action,input));
 }catch(e){return json({error:e instanceof Failure?e.message:'Request failed validation'},e instanceof Failure?e.status:400)}}

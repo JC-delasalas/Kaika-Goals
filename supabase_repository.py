@@ -58,6 +58,8 @@ class SupabaseRepository:
  def engine(self,snapshot):
   # Reuse the exact validated domain commands and scoped projections used by the demo.
   f=Fixture.__new__(Fixture);f.storage=None;f.lock=threading.RLock();f.people=[p for p in snapshot['people'] if p.get('source_active',True)];f.db=snapshot['db'];f.as_of=snapshot['as_of'];f.scenario=snapshot['scenario'];f.done={};f.files=Files(self.cloud,f.db['evidence'])
+  profiles={p['person_id']:p for p in snapshot.get('profiles',[])}
+  for p in f.people:p.update(profiles.get(p['id'],{}))
   f.db['checkins'].sort(key=lambda c:c.get('created_at',''),reverse=True)
   return f
  def state(self,f,snapshot,leader):
@@ -70,6 +72,16 @@ class SupabaseRepository:
   try:
    inp=json.loads(body) if path!='/api/upload' else {};q={k:v[0] for k,v in urllib.parse.parse_qs(query).items()};action=inp.get('action');leader=q.get('leader') if path=='/api/upload' else inp.get('leader_id')
    require(action!='demo_scenario','Connected workshop records are persistent. Scenario replacement is available only in the separate offline demo.',403)
+   if action=='profile_save':
+    from profile_domain import normalize_profile
+    payload=normalize_profile(leader,inp.get('data',{}));mid=inp.get('mutation_id');uuid.UUID(mid)
+    result=self.cloud.request('profile_save',{**payload,'leader_id':leader,'mutation_id':mid,'request_hash':hashlib.sha256(body).hexdigest()})
+    snapshot=self.cloud.request('load');f=self.engine(snapshot)
+    return 200,{**result,'_state':self.state(f,snapshot,leader)},{}
+   if action=='profile_photos':
+    ids=inp.get('data',{}).get('person_ids',[])
+    require(isinstance(ids,list) and 0<len(ids)<=24,'Request up to 24 profile images.')
+    return 200,{'profiles':self.cloud.request('profile_photos',{'leader_id':leader,'person_ids':ids})},{}
    mutation=path=='/api/upload' or path=='/api/command' and action not in ['state','leaders','session']
    mid=q.get('upload_id') if path=='/api/upload' else inp.get('mutation_id');signature=hashlib.sha256(path.encode()+b'\0'+query.encode()+b'\0'+body).hexdigest()
    prior_future=None
