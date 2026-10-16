@@ -26,6 +26,7 @@ class LeadershipTests(unittest.TestCase):
  def test_snapshot_frozen_and_rejects_outside_scope(self):
   p={'goal_ids':[self.g['id']],'title':'Weekly review','text':'Narrative based on current evidence.'}
   _,result,_=self.call('publish_snapshot',p,'ada');snapshot=copy.deepcopy(next(r for r in self.f.db['reviews'] if r['id']==result['id'])['snapshot'])
+  self.assertIn('approvals',snapshot);self.assertTrue(all(a['version_id'] in {v['id'] for v in snapshot['versions']} for a in snapshot['approvals']))
   m=next(m for m in self.f.db['measures'] if m['version_id']==self.g['active_version_id'])
   self.call('reading',{'goal_id':self.g['id'],'measure_id':m['id'],'value':95,'evidence_note':'New independent measurement after publishing.'})
   self.assertEqual(next(r for r in self.f.db['reviews'] if r['id']==result['id'])['snapshot'],snapshot)

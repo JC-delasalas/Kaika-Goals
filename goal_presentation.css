@@ -1,0 +1,12 @@
+.person-avatar{display:inline-grid;position:relative;place-items:center;vertical-align:middle;flex:0 0 28px;width:28px;height:28px;min-width:28px;border-radius:50%;background:#e2eee9;border:1px solid #c6d9d1;color:#265c4e;font:700 10px/1 system-ui;overflow:hidden;box-sizing:border-box}
+.person-avatar img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#e2eee9}
+.person-label{display:inline-flex;align-items:center;gap:7px;vertical-align:middle;max-width:100%;line-height:1.35}.person-label>span:last-child{overflow-wrap:anywhere}
+.people-stack{display:inline-flex;vertical-align:middle;padding-left:4px}.people-stack .person-avatar{margin-left:-4px;box-shadow:0 0 0 2px #fff}.people-overflow{background:#f0f3f2}
+.goal-lifecycle{display:inline-block;font-size:11px;font-weight:600;line-height:1.4;color:#52675e}.goal-lifecycle.pending{padding:3px 6px;border-radius:4px;background:#fff3d6;color:#755000}
+.goal-secondary{display:block;margin-top:5px;line-height:1.4;color:#52675e}.goal-people{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0;font-size:11px;color:#52675e}.goal-people>span{display:inline-flex;align-items:center;gap:5px}.goal-people small{font-size:11px}
+.goal-resources{margin-top:10px;font-size:12px}.goal-resources summary{cursor:pointer;font-weight:600;padding:7px 0}.goal-resources table{font-size:12px}.goal-resources th,.goal-resources td{padding:8px}.goal-resources p{line-height:1.5}
+.pc-status{flex-wrap:wrap}.pc-status .goal-lifecycle{flex-basis:100%}.portfolio-workspace td>.goal-lifecycle{margin-top:6px}.oa-meta .person-label{font-size:12px}.map-numbers>.goal-secondary{font-size:11px}.map-owner{margin:8px 0}.hierarchy-list-row .goal-lifecycle{max-width:190px}
+#who .person-avatar{width:32px;height:32px;flex-basis:32px}.tp-identity>.person-avatar{width:36px;height:36px;flex-basis:36px}
+@media(max-width:600px){.person-label{gap:5px}.person-avatar{width:24px;height:24px;min-width:24px;flex-basis:24px}.goal-resources{max-width:100%;overflow:auto}}
+
+.leader-picker{display:flex;align-items:center;gap:8px;min-width:0}.leader-picker select{flex:1;min-width:0;width:100%}.leader-picker .person-avatar{width:32px;height:32px;flex-basis:32px}

@@ -31,7 +31,7 @@ console.log('PASS: urgency precedence, overdue ordering, waiting exclusion, full
 assert.equal(ctx.hygieneUrgency({kind:'evidence',due:'2026-12-01'}),'attention','Submitted evidence needs a decision now, even with a future checkpoint date');
 
 // Completeness checks are read-only and preserve outcome/delivery distinctions.
-ctx.makeDraft=(g,v)=>({...v,measures:[],deliverables:[]});ctx.gaps=d=>d.success_basis==='delivery'?[]:['Define outcome measures.'];
+ctx.goalResourceIssues=()=>[];ctx.makeDraft=(g,v)=>({...v,measures:[],deliverables:[]});ctx.gaps=d=>d.success_basis==='delivery'?[]:['Define outcome measures.'];
 vm.runInContext(fs.readFileSync(__dirname+'/hygiene_ui.js','utf8').split('function hygienePlanChecks')[0],ctx);
 versions[0].state='draft';versions[0].ends_on=null;versions[0].success_basis='delivery';
 let issues=ctx.hygienePlanIssues(goals[0]);assert(issues.includes('Set the start and end dates.'));assert(!issues.includes('Define outcome measures.'));
@@ -48,3 +48,10 @@ console.log('PASS: outgoing questions stay visible as waiting, not assigned work
 goals[0].assignment_state='accepted';ctx.status=()=> 'returned';
 assert(ctx.hygienePlanIssues(goals[0])[0].includes('approver'), 'Return decision is read from approval status even when stored version state is submitted');
 console.log('PASS: returned plans stay in the checklist until revised.');
+
+// A revision awaiting approval remains visible to its owner without granting approval.
+versions.push({id:'proposal',goal_id:'mine',owner_id:'me',approver_id:'boss',state:'submitted',version_no:2,title:'Proposed revision'});
+ctx.latest=id=>versions.filter(v=>v.goal_id===id).at(-1);
+let waitingApproval=queue().find(r=>r.key==='waiting-approval-proposal');assert(waitingApproval?.waiting);assert.equal(waitingApproval.path,'plans/mine/setup');assert.equal(ctx.hygieneUrgency(waitingApproval),'waiting');
+data.approvals.push({version_id:'proposal',decision:'returned'});assert(!queue().some(r=>r.key==='waiting-approval-proposal'));
+console.log('PASS: own submitted revisions remain inspectable as waiting and clear after a decision.');

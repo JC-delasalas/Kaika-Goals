@@ -45,7 +45,7 @@ def handle(f,l,action,p):
    ids=expanded
   vs=[v for v in s['versions'] if v['goal_id'] in ids];vids={v['id'] for v in vs};dids={d['id'] for d in s['deliverables'] if d['version_id'] in vids};mids={m['id'] for m in s['measures'] if m['version_id'] in vids};kids={k['id'] for k in s['kpis'] if k['version_id'] in vids}
   snapshot=dict(text=text(p,'text'),as_of=f.as_of,goals=[g for g in s['goals'] if g['id'] in selected],contributing_goals=[g for g in s['goals'] if g['id'] in ids-selected],versions=vs,progress=[r for r in s['progress'] if r['root_id'] in ids],outcomes=[r for r in s['outcomes'] if r['goal_id'] in ids],measures=[m for m in s['measures'] if m['id'] in mids],readings=[r for r in s['readings'] if r['measure_id'] in mids],kpis=[k for k in s['kpis'] if k['id'] in kids],kpi_readings=[r for r in s['kpi_readings'] if r['kpi_id'] in kids],evidence=[e for e in s['evidence'] if e['deliverable_id'] in dids])
-  for key in ['deliverables','allocations']:snapshot[key]=[r for r in s[key] if r['version_id'] in vids]
+  for key in ['deliverables','allocations','approvals']:snapshot[key]=[r for r in s[key] if r['version_id'] in vids]
   for key in ['checkpoints','acceptances','delivery_progress']:snapshot[key]=[r for r in s[key] if r['deliverable_id'] in dids]
   for key in ['checkins','questions','decisions','reflections','replies','followups']:snapshot[key]=[r for r in s[key] if r['goal_id'] in ids]
   if p.get('summary_capture'):

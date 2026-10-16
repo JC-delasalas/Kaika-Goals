@@ -5,7 +5,7 @@
   "scripts": {
     "build:transport": "vite build",
     "typecheck": "tsc --noEmit",
-    "test:ui": "node test_hygiene.js && node test_summary_history.js && node test_plans_map.js && node test_team.js && node test_portfolio.js && node test_reviews.js && node test_summary.js && node test_file_entry.js && node test_charter.js && node test_registration.js",
+    "test:ui": "node test_hygiene.js && node test_summary_history.js && node test_plans_map.js && node test_team.js && node test_portfolio.js && node test_reviews.js && node test_summary.js && node test_file_entry.js && node test_charter.js && node test_registration.js && node test_goal_presentation.js",
     "build": "vite build && python3 build.py",
     "check": "npm run typecheck && npm run test:ui"
   },
